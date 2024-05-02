@@ -5,4 +5,4 @@
 .vscode/ipch
 lib/
 test/README
-src/secrets.h
+include/secrets.h
