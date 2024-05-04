@@ -13,6 +13,9 @@
 
   It is based largely on the ESP32 example provided by AWS at this location. https://github.com/aws-samples/aws-iot-esp32-arduino-examples https://aws.amazon.com/blogs/compute/building-an-aws-iot-core-device-using-aws-serverless-and-an-esp32/
 
+2. serial 인터페이스  참조 사이트 :
+     https://www.jobtoy.com/project/arduino_view?idx=85
+
 **********************************************************************/
 
 #include <Arduino.h>

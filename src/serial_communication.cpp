@@ -48,14 +48,18 @@ void send_power_ozs(String &power) {
     if (doc["power"] == "on") {
          Serial.print("send_power_ozs power on");
          Serial.println();
+        send_serial_data("{power:on:}");
+
     } else if (doc["power"] == "off") {
         Serial.print("send_power_ozs power off");
          Serial.println();
+          send_serial_data("{power:off:}");
     } else {
         Serial.println("Key not found in data");
     }
 
-    // send_serial_data("{start:act:}"); // Additional data transmission
+    // start ozs
+    send_serial_data("{start:act:}"); // Additional data transmission
 }
 
 void send_stop_ozs() {
