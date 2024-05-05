@@ -135,6 +135,9 @@ void setup() {
   connectAWS();
   Serial.println(""); Serial.println(""); 
   client.onMessage(messageHandler);
+
+  // 2024-05-05 : 네트웍 준비 송부
+  send_wifi_ready();
 }
 
 void loop() {

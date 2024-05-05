@@ -12,4 +12,6 @@ void send_stop_ozs();
 void send_start_ozs(int action, int duration, int wind_speed);
 void on_message_received(String &topic, String &payload);
 
+void send_wifi_ready();
+
 #endif // SERIAL_COMMUNICATION_H

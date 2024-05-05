@@ -24,6 +24,14 @@ void send_serial_data(const char *data) {
     }
 }
 
+// wifi ready send
+void send_wifi_ready() {
+    Serial.println("send wifi ready to ozs");
+
+    send_serial_data("{wifi:on:}");
+
+}
+
 void send_power_ozs(String &power) {
     Serial.println("send power cmd");
 
