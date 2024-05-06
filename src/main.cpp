@@ -32,13 +32,20 @@
 
 // The MQTT topics that this device should publish/subscribe to
 #define AWS_IOT_PUBLISH_TOPIC   "ozs/test"
-#define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test"
+
+// 2024-05-05 : 디바이스 ID에 따른 topic을 지정했다.
+#define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00001"
+
+
 WiFiClientSecure net = WiFiClientSecure();
 MQTTClient client = MQTTClient(256);
 
 
 // port(5,6) ozs serial 통신
 SoftwareSerial SerialPort(D5,D6);
+
+String receivedString = ""; // 수신된 문자열을 저장할 변수
+bool insideBrackets = false; // '['와 ']' 사이의 문자열인지 여부를 나타내는 플래그
 
 void connectAWS()
 {
@@ -144,5 +151,39 @@ void loop() {
   // Serial.printf(".");
   // publishMessage();
   client.loop();
+
+  // 2024-05-06 :SerialPort로부터 데이터를 읽어옴
+  // OZS 보드에서 MQTT가 연결이 되었는지 확인 메세지를 처리한다. 
+  // 확인 메세지 "hello 8226"
+  while (SerialPort.available() > 0) {
+     // 시리얼 데이터 읽기
+    char incomingChar = SerialPort.read();
+
+    // '['가 들어오면 내부 문자열 시작
+    if (incomingChar == '[') {
+      insideBrackets = true;
+      receivedString = ""; // 새로운 문자열 시작
+    }
+    // ']'가 들어오면 내부 문자열 끝
+    else if (incomingChar == ']') {
+      insideBrackets = false;
+      
+      // 내부 문자열을 처리 (예: 시리얼 모니터로 출력)
+      Serial.println(" Rx=" + receivedString);
+
+      // 2024-05-06 : "8266" 문자열이 포함되어 있는지 확인하여 처리
+      if (receivedString.indexOf("8266") != -1) {
+        // "8266"이 포함되어 있으면 send_wifi_ready() 함수 호출
+        send_wifi_ready();
+      }
+
+    }
+    // '['와 ']' 사이의 문자열인 경우 receivedString에 문자 추가
+    else if (insideBrackets) {
+      receivedString += incomingChar;
+    }
+  }
+
+
   delay(1000);
 }
