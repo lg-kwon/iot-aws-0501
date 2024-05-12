@@ -27,6 +27,7 @@
 #include "ESP8266WiFi.h"        // From the core ESP library - Don't need to add this.
 
 #include "serial_communication.h"
+#include "timer.h"
 
 
 
@@ -34,7 +35,8 @@
 #define AWS_IOT_PUBLISH_TOPIC   "ozs/test"
 
 // 2024-05-05 : 디바이스 ID에 따른 topic을 지정했다.
-#define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00001"
+// #define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00001"
+#define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00002"
 
 
 WiFiClientSecure net = WiFiClientSecure();
@@ -68,6 +70,10 @@ void connectAWS()
   Serial.print(" RSSI: "); 
   Serial.println(WiFi.RSSI());
 
+  Serial.print("AWS_IOT_SUBSCRIBE_TOPIC :");
+  Serial.println(AWS_IOT_SUBSCRIBE_TOPIC);
+
+
   // Set the real time as this is needed for X509 certificate verification
   Serial.println(""); 
   Serial.print("Waiting for NTP time sync: ");
@@ -82,6 +88,7 @@ void connectAWS()
   gmtime_r(&now, &timeinfo);
   Serial.println(""); 
   Serial.print("Current time: "); 
+  convertToKoreanTime(&timeinfo);
   Serial.print(asctime(&timeinfo));
 
   // Connect to AWS MQTT
