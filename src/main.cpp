@@ -9,9 +9,14 @@
 
   참조 사이트 : https://github.com/camsaway/aws-iot-esp8266-mqtt-example/blob/main/README.md
 
+  참조 사이트 : https://www.youtube.com/watch?v=xZoeJ-osS3g
+
   The purpose of this repo is to provide ESP8266 compatible code to connect to IoT Core MQTT service.
 
-  It is based largely on the ESP32 example provided by AWS at this location. https://github.com/aws-samples/aws-iot-esp32-arduino-examples https://aws.amazon.com/blogs/compute/building-an-aws-iot-core-device-using-aws-serverless-and-an-esp32/
+  It is based largely on the ESP32 example provided by AWS at this location. https://github.com/aws-samples/aws-iot-esp32-arduino-examples 
+  
+  아마존 사이트: 
+  https://aws.amazon.com/blogs/compute/building-an-aws-iot-core-device-using-aws-serverless-and-an-esp32/
 
 2. serial 인터페이스  참조 사이트 :
      https://www.jobtoy.com/project/arduino_view?idx=85
@@ -36,7 +41,8 @@
 
 // 2024-05-05 : 디바이스 ID에 따른 topic을 지정했다.
 // #define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00001"
-#define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00002"
+// #define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00002"
+#define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00004"
 
 
 WiFiClientSecure net = WiFiClientSecure();
@@ -94,13 +100,23 @@ void connectAWS()
   // Connect to AWS MQTT
   Serial.println(""); 
   Serial.println("Connecting to AWS IOT");
-  // Configure WiFiClientSecure to use the AWS IoT device credentials
+
+  
+   // Configure WiFiClientSecure to use the AWS IoT device credentials
     BearSSL::X509List cert(AWS_CERT_CA);
     net.setTrustAnchors(&cert);
     BearSSL::X509List client_crt(AWS_CERT_CRT);
     BearSSL::PrivateKey key(AWS_CERT_PRIVATE);
     net.setClientRSACert(&client_crt, &key);
+  
+  
   // Connect to the MQTT broker on the AWS endpoint we defined earlier
+
+  // Configure WiFiClientSecure to use the AWS IoT device credentials
+    // net.setCACert(AWS_CERT_CA);
+    // net.setCertificate(AWS_CERT_CRT);
+    // net.setPrivateKey(AWS_CERT_PRIVATE);
+
   client.begin(AWS_IOT_ENDPOINT, 8883, net);
 
 
