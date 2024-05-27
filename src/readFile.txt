@@ -1,0 +1,18 @@
+
+#include "readFile.h"
+
+// 파일에서 데이터를 읽어오는 함수
+String readFile(fs::FS &fs, const char * path) {
+    Serial.printf("Reading file: %s\n", path);
+    File file = fs.open(path, "r");
+    if (!file || file.isDirectory()) {
+        Serial.println("Failed to open file for reading");
+        return String();
+    }
+    
+    String fileContent;
+    while (file.available()) {
+        fileContent += String((char)file.read());
+    }
+    return fileContent;
+}

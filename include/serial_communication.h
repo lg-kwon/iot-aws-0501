@@ -5,6 +5,7 @@
 #include <SoftwareSerial.h>
 
 extern SoftwareSerial SerialPort;
+void publishMessage();
 
 void send_serial_data(const char *data);
 void send_power_ozs(String &power);

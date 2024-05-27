@@ -5,4 +5,5 @@
 .vscode/ipch
 lib/
 test/README
-include/secrets.h
+/include
+/certificate

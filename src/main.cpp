@@ -20,7 +20,7 @@
 
 #include <Arduino.h>
 
-#include "secrets.h"            // Currently a file for Keys, Certs, etc
+#include "secrets_7da964b5019e7ef01fb29fbe3c1afc754a0385d9443b399105966575bfc3d4e4.h"            // Currently a file for Keys, Certs, etc
 #include <WiFiClientSecure.h>   // From the core ESP library - Don't need to add this
 #include <MQTTClient.h>         // Need to add library 256dpi/MQTT
 #include <ArduinoJson.h>        // Need to add library bblanchon/ArduinoJSON
@@ -28,15 +28,6 @@
 
 #include "serial_communication.h"
 #include "timer.h"
-
-
-
-// The MQTT topics that this device should publish/subscribe to
-#define AWS_IOT_PUBLISH_TOPIC   "ozs/test"
-
-// 2024-05-05 : 디바이스 ID에 따른 topic을 지정했다.
-// #define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00001"
-#define AWS_IOT_SUBSCRIBE_TOPIC "ozs/test/00002"
 
 
 WiFiClientSecure net = WiFiClientSecure();
@@ -48,6 +39,8 @@ SoftwareSerial SerialPort(D5,D6);
 
 String receivedString = ""; // 수신된 문자열을 저장할 변수
 bool insideBrackets = false; // '['와 ']' 사이의 문자열인지 여부를 나타내는 플래그
+
+struct tm timeinfo;
 
 void connectAWS()
 {
@@ -84,7 +77,7 @@ void connectAWS()
     Serial.print(".");
     now = time(nullptr);
   }
-  struct tm timeinfo;
+  
   gmtime_r(&now, &timeinfo);
   Serial.println(""); 
   Serial.print("Current time: "); 
@@ -122,8 +115,13 @@ void connectAWS()
 
 void publishMessage()
 {
+  Serial.println("publish Message.....");
   StaticJsonDocument<200> doc;
-  doc["time"] = millis();
+  time_t now = time(nullptr);
+   gmtime_r(&now, &timeinfo);
+   convertToKoreanTime(&timeinfo);
+
+  doc["time"] = asctime(&timeinfo);
   doc["sensor_a0"] = analogRead(0);
   char jsonBuffer[512];
   serializeJson(doc, jsonBuffer); // print to client
@@ -152,6 +150,66 @@ void setup() {
 
   // 2024-05-05 : 네트웍 준비 송부
   send_wifi_ready();
+  delay(2000);
+  // publishMessage();
+}
+
+void publish_ozs_status(String &message){
+  Serial.println("report ozs board status......." + message);
+
+  // ":" delimiter로 message를 분리
+  int delimiterIndex = message.indexOf(':');
+  String firstToken = message.substring(0, delimiterIndex);
+  firstToken.trim();
+
+  Serial.println("firstToke = " + firstToken);
+  String secondToken = message.substring(delimiterIndex + 1);
+
+  delimiterIndex = secondToken.indexOf(':');
+  String status = secondToken.substring(0,delimiterIndex);
+  String time = secondToken.substring(delimiterIndex+1);
+  
+  Serial.println("status = " + status);
+  Serial.println("time = " + time);
+
+
+  StaticJsonDocument<200> doc;
+
+  doc["status"] = status;
+  doc["time"] = time;
+
+  char jsonBuffer[512];
+  serializeJson(doc, jsonBuffer); // print to client
+  client.publish(AWS_IOT_PUBLISH_TOPIC, jsonBuffer);
+}
+
+void publish_ozs_system_info(String &message){
+  Serial.println("report ozs system info = " + message);
+
+  // ":" delimiter로 message를 분리
+  int delimiterIndex = message.indexOf(':');
+  String firstToken = message.substring(0, delimiterIndex);
+
+  Serial.println("firstToke = " + firstToken);
+  String info = message.substring(delimiterIndex + 1);
+
+  // delimiterIndex = secondToken.indexOf(':');
+  // String filter = secondToken.substring(0,delimiterIndex);
+  // String time = secondToken.substring(delimiterIndex+1);
+  
+  Serial.println("rx info = " + info);
+  // Serial.println("time = " + time);
+
+
+  StaticJsonDocument<200> doc;
+
+  doc["info"] = info;
+  doc["serial"] = OZS_SERIAL_NUMBER;
+  
+
+  char jsonBuffer[512];
+  serializeJson(doc, jsonBuffer); // print to client
+  client.publish(AWS_IOT_PUBLISH_TOPIC, jsonBuffer);
 }
 
 void loop() {
@@ -183,6 +241,13 @@ void loop() {
         // "8266"이 포함되어 있으면 send_wifi_ready() 함수 호출
         send_wifi_ready();
       }
+      else if(receivedString.indexOf("OZS") != -1){
+        publish_ozs_status(receivedString);
+      }
+      else if(receivedString.indexOf("SYSINFO") != -1){
+        publish_ozs_system_info(receivedString);
+      }
+
 
     }
     // '['와 ']' 사이의 문자열인 경우 receivedString에 문자 추가

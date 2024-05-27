@@ -77,6 +77,20 @@ void send_stop_ozs() {
     send_serial_data("{start:act:}");
 }
 
+void send_check_ozs_status() {
+    Serial.println("send check ozs status");
+
+    send_serial_data("{status:status:}");
+    send_serial_data("{start:act:}");
+}
+
+void send_check_system_info() {
+    Serial.println("check system info");
+
+    send_serial_data("{status:sysinfo:}");
+    send_serial_data("{start:act:}");
+}
+
 void send_start_ozs(int action, int duration, int wind_speed) {
 
     Serial.println("send start cmd :");
@@ -177,20 +191,31 @@ void on_message_received(String &topic, String &payload) {
     else if(doc.containsKey("power")){
         send_power_ozs(payload);
     }
+
+    else if(doc.containsKey("status")){
+       // Print the value of "status"
+        const char* statusValue = doc["status"].as<const char*>();
+        // Serial.print("Status: ");
+        // Serial.println(statusValue);
+
+        // Additional logic based on the value of "status"
+        if (strcmp(statusValue, "status") == 0) {
+            Serial.println("Received status check...");
+            send_check_ozs_status();
+        } else if (strcmp(statusValue, "sysinfo") == 0) {
+            Serial.println("Received system info inquiry");
+            send_check_system_info();
+        } else {
+            Serial.println("Error: unrecognized status value");
+        }
+        //  publishMessage();
+
+    }
     
     
     else {
         Serial.printf("No 'start' key found in data");
     }
 
-    // // Handle different commands
-    // if (doc.containsKey("power")) {
-    //     send_power_ozs(payload);
-    // } else if (doc.containsKey("stop")) {
-    //     send_stop_ozs();
-    // } else if (doc.containsKey("start")) {
-    //     send_start_ozs(action, duration, wind_speed);
-    // } else {
-    //     Serial.println("Key not found in data");
-    // }
+    
 }
