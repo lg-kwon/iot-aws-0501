@@ -1,12 +1,17 @@
 #include "serial_communication.h"
 #include <ArduinoJson.h>        // Need to add library bblanchon/ArduinoJSON
 
+ #define DEBUG
+
 void send_serial_data(const char *data) {
     // Implementation of serial write function
 
     String newData = "[" + String(data) + "]";
 
+#ifdef DEBUG
     Serial.printf("json data = %s\n", newData.c_str());
+#endif
+
     // Your serial write logic goes here
     // Example: serial_write_function(data);
     // For demonstration, I'm just printing the data here
@@ -15,8 +20,11 @@ void send_serial_data(const char *data) {
         char currentChar = newData.charAt(i);
         
         // Serial.printf("Sending character: %c \n", currentChar);
+        
         SerialPort.write(currentChar);
-        delay(10);
+        
+        //2024-05-29 : 시리얼로 전달할 때 delay가 필요하다. 이것이 없으면 통신이 안되는 경우 발생.
+        delay(2);
 
         // Your serial write logic goes here
         // Example: serial_write_function(currentChar);
@@ -48,9 +56,13 @@ void send_power_ozs(String &power) {
     // Serialize JSON document to a string
     char jsonBuffer[200];
     serializeJsonPretty(doc, jsonBuffer, sizeof(jsonBuffer));
+
+#ifdef DEBUG  
     // Print JSON string
     Serial.println("send_power_ozs Parsed JSON document:");
     Serial.println(jsonBuffer);
+#endif
+
 
     // Handle different commands
     if (doc["power"] == "on") {
@@ -139,10 +151,13 @@ void send_start_ozs(int action, int duration, int wind_speed) {
 }
 
 void on_message_received(String &topic, String &payload) {
+
+#ifdef DEBUG
     Serial.print("Received message from topic '");
     Serial.print(topic);
     Serial.print("': ");
     Serial.println(payload);
+#endif
 
     // Parse JSON payload
     StaticJsonDocument<200> doc; // Adjust the size as needed
@@ -158,9 +173,11 @@ void on_message_received(String &topic, String &payload) {
     char jsonBuffer[200];
     serializeJsonPretty(doc, jsonBuffer, sizeof(jsonBuffer));
 
+#ifdef DEBUG
     // Print JSON string
     Serial.println("Parsed JSON document:");
     Serial.println(jsonBuffer);
+#endif
 
     // Check if "start" key exists
     if (doc.containsKey("start")) {
@@ -172,12 +189,14 @@ void on_message_received(String &topic, String &payload) {
             int action = startObj["action"];
             int time = startObj["time"];
             int wind = startObj["wind"];
+#ifdef DEBUG
             Serial.print("Action: ");
             Serial.println(action);
             Serial.print("Time: ");
             Serial.println(time);
             Serial.print("Wind: ");
             Serial.println(wind);
+#endif
             // Now you can use the extracted values as needed
             send_start_ozs(action, time, wind);
 
@@ -200,10 +219,14 @@ void on_message_received(String &topic, String &payload) {
 
         // Additional logic based on the value of "status"
         if (strcmp(statusValue, "status") == 0) {
+            #ifdef DEBUG
             Serial.println("Received status check...");
+            #endif
             send_check_ozs_status();
         } else if (strcmp(statusValue, "sysinfo") == 0) {
+            #ifdef DEBUG
             Serial.println("Received system info inquiry");
+            #endif
             send_check_system_info();
         } else {
             Serial.println("Error: unrecognized status value");

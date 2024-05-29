@@ -20,7 +20,21 @@
 
 #include <Arduino.h>
 
-#include "secrets_7da964b5019e7ef01fb29fbe3c1afc754a0385d9443b399105966575bfc3d4e4.h"            // Currently a file for Keys, Certs, etc
+
+#define DEBUG
+#define OZS_SERIAL_NUMBER_00002
+// #define OZS_SERIAL_NUMBER_00004
+
+// 2024-05-29 : 디바이스 key 포함
+#ifdef OZS_SERIAL_NUMBER_00002
+#include "secrets_7da964b5019e7ef01fb29fbe3c1afc754a0385d9443b399105966575bfc3d4e4.h"            
+#endif
+
+#ifdef OZS_SERIAL_NUMBER_00004
+#include "secrets_e73bd4c5ee.h"
+#endif
+
+
 #include <WiFiClientSecure.h>   // From the core ESP library - Don't need to add this
 #include <MQTTClient.h>         // Need to add library 256dpi/MQTT
 #include <ArduinoJson.h>        // Need to add library bblanchon/ArduinoJSON
@@ -41,6 +55,11 @@ String receivedString = ""; // 수신된 문자열을 저장할 변수
 bool insideBrackets = false; // '['와 ']' 사이의 문자열인지 여부를 나타내는 플래그
 
 struct tm timeinfo;
+
+unsigned long start_time;
+unsigned long end_time;
+
+
 
 void connectAWS()
 {
@@ -94,10 +113,16 @@ void connectAWS()
     BearSSL::PrivateKey key(AWS_CERT_PRIVATE);
     net.setClientRSACert(&client_crt, &key);
   // Connect to the MQTT broker on the AWS endpoint we defined earlier
+
+  String clientId = "ESP8266Client-" + String(ESP.getChipId());
+
+  Serial.println("client id:");
+  Serial.println(clientId);
+
   client.begin(AWS_IOT_ENDPOINT, 8883, net);
 
 
-  while (!client.connect(THINGNAME)) {
+  while (!client.connect(clientId.c_str())) {
     Serial.print(".");
     delay(100);
   }
@@ -113,24 +138,19 @@ void connectAWS()
   Serial.println("Topic Subscribed");
 }
 
-void publishMessage()
-{
-  Serial.println("publish Message.....");
-  StaticJsonDocument<200> doc;
-  time_t now = time(nullptr);
-   gmtime_r(&now, &timeinfo);
-   convertToKoreanTime(&timeinfo);
 
-  doc["time"] = asctime(&timeinfo);
-  doc["sensor_a0"] = analogRead(0);
-  char jsonBuffer[512];
-  serializeJson(doc, jsonBuffer); // print to client
-  client.publish(AWS_IOT_PUBLISH_TOPIC, jsonBuffer);
-}
 
 void messageHandler(String &topic, String &payload) {
+
+
+  start_time = millis();
+
+
   payload.replace("\\","");
+
+  #ifdef DEBUG
   Serial.println("incoming: " + topic + " - " + payload);
+  #endif
 
   on_message_received(topic, payload );
 
@@ -150,12 +170,38 @@ void setup() {
 
   // 2024-05-05 : 네트웍 준비 송부
   send_wifi_ready();
-  delay(2000);
+  // delay(200);
   // publishMessage();
 }
 
+void publishMessage()
+{
+  Serial.println("publish Message.....");
+  StaticJsonDocument<200> doc;
+  time_t now = time(nullptr);
+   gmtime_r(&now, &timeinfo);
+   convertToKoreanTime(&timeinfo);
+
+  doc["time"] = asctime(&timeinfo);
+  doc["sensor_a0"] = analogRead(0);
+  char jsonBuffer[512];
+  serializeJson(doc, jsonBuffer); // print to client
+  client.publish(AWS_IOT_PUBLISH_TOPIC, jsonBuffer);
+
+  end_time = millis();
+
+  unsigned long elapsedTime = end_time - start_time;
+  Serial.print("Message handling and publishing took: ");
+  Serial.print(elapsedTime);
+  Serial.println(" ms");
+
+}
+
 void publish_ozs_status(String &message){
+
+  #ifdef DEBUG
   Serial.println("report ozs board status......." + message);
+  #endif
 
   // ":" delimiter로 message를 분리
   int delimiterIndex = message.indexOf(':');
@@ -169,8 +215,10 @@ void publish_ozs_status(String &message){
   String status = secondToken.substring(0,delimiterIndex);
   String time = secondToken.substring(delimiterIndex+1);
   
+  #ifdef DEBUG
   Serial.println("status = " + status);
   Serial.println("time = " + time);
+  #endif
 
 
   StaticJsonDocument<200> doc;
@@ -181,16 +229,28 @@ void publish_ozs_status(String &message){
   char jsonBuffer[512];
   serializeJson(doc, jsonBuffer); // print to client
   client.publish(AWS_IOT_PUBLISH_TOPIC, jsonBuffer);
+
+
+  end_time = millis();
+
+  unsigned long elapsedTime = end_time - start_time;
+  Serial.print("Message handling and publishing took: ");
+  Serial.print(elapsedTime);
+  Serial.println(" ms");
+
+
 }
 
 void publish_ozs_system_info(String &message){
-  Serial.println("report ozs system info = " + message);
+  // Serial.println("report ozs system info = " + message);
 
   // ":" delimiter로 message를 분리
   int delimiterIndex = message.indexOf(':');
   String firstToken = message.substring(0, delimiterIndex);
 
+#ifdef DEBUG
   Serial.println("firstToke = " + firstToken);
+#endif
   String info = message.substring(delimiterIndex + 1);
 
   // delimiterIndex = secondToken.indexOf(':');
@@ -210,6 +270,16 @@ void publish_ozs_system_info(String &message){
   char jsonBuffer[512];
   serializeJson(doc, jsonBuffer); // print to client
   client.publish(AWS_IOT_PUBLISH_TOPIC, jsonBuffer);
+
+ 
+  end_time = millis();
+
+  unsigned long elapsedTime = end_time - start_time;
+  Serial.print("Message handling and publishing took: ");
+  Serial.print(elapsedTime);
+  Serial.println(" ms");
+
+
 }
 
 void loop() {
@@ -247,6 +317,9 @@ void loop() {
       else if(receivedString.indexOf("SYSINFO") != -1){
         publish_ozs_system_info(receivedString);
       }
+      else{
+        Serial.println("loop: critical error:");
+      }
 
 
     }
@@ -256,6 +329,6 @@ void loop() {
     }
   }
 
-
-  delay(1000);
+  //2024-05-29 : 10ms 마다 한번씩 체크한다. 시간을 획기적으로 줄였다.
+  delay(10);
 }
