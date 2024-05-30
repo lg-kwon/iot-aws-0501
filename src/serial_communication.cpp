@@ -1,7 +1,10 @@
 #include "serial_communication.h"
 #include <ArduinoJson.h>        // Need to add library bblanchon/ArduinoJSON
 
- #define DEBUG
+#define DEBUG
+
+#define SERIAL_DELAY 5
+
 
 void send_serial_data(const char *data) {
     // Implementation of serial write function
@@ -24,7 +27,7 @@ void send_serial_data(const char *data) {
         SerialPort.write(currentChar);
         
         //2024-05-29 : 시리얼로 전달할 때 delay가 필요하다. 이것이 없으면 통신이 안되는 경우 발생.
-        delay(2);
+        delay(SERIAL_DELAY);
 
         // Your serial write logic goes here
         // Example: serial_write_function(currentChar);
@@ -36,7 +39,7 @@ void send_serial_data(const char *data) {
 void send_wifi_ready() {
     Serial.println("send wifi ready to ozs");
 
-    send_serial_data("{wifi:on:}");
+    send_serial_data("{wifi:on}");
 
 }
 
@@ -68,86 +71,70 @@ void send_power_ozs(String &power) {
     if (doc["power"] == "on") {
          Serial.print("send_power_ozs power on");
          Serial.println();
-        send_serial_data("{power:on:}");
+        send_serial_data("{power:on}");
 
     } else if (doc["power"] == "off") {
         Serial.print("send_power_ozs power off");
          Serial.println();
-          send_serial_data("{power:off:}");
+          send_serial_data("{power:off}");
     } else {
         Serial.println("Key not found in data");
     }
 
     // start ozs
-    send_serial_data("{start:act:}"); // Additional data transmission
+    send_serial_data("{start:act}"); // Additional data transmission
 }
 
 void send_stop_ozs() {
     Serial.println("send stop cmd");
 
-    send_serial_data("{stop:on:}");
-    send_serial_data("{start:act:}");
+    send_serial_data("{stop:on}");
+    // delay(SERIAL_DELAY);
+    // send_serial_data("{start:act:}");
 }
 
 void send_check_ozs_status() {
     Serial.println("send check ozs status");
 
-    send_serial_data("{status:status:}");
-    send_serial_data("{start:act:}");
+    send_serial_data("{status:status}");
+    // delay(SERIAL_DELAY);
+    // send_serial_data("{start:act:}");
 }
 
 void send_check_system_info() {
     Serial.println("check system info");
 
-    send_serial_data("{status:sysinfo:}");
-    send_serial_data("{start:act:}");
+    send_serial_data("{status:sysinfo}");
+    // delay(SERIAL_DELAY);
+    // send_serial_data("{start:act:}");
 }
 
 void send_start_ozs(int action, int duration, int wind_speed) {
 
-    Serial.println("send start cmd :");
+   Serial.println("send start cmd :");
     Serial.printf("action = %d\n", action);
     Serial.printf("time = %d\n", duration);
     Serial.printf("wind = %d\n", wind_speed);
 
-    // Power on transmission
-    send_serial_data("{power:on:}");
+    // Create a JSON document
+    StaticJsonDocument<200> doc;
+    doc["action"] = action;
+    doc["duration"] = duration * 30;
+    doc["wind_speed"] = wind_speed;
 
-    // Mode transmission
-    if (action == 1) {
-        send_serial_data("{mode:1:}");
-    } else if (action == 2) {
-        send_serial_data("{mode:2:}");
-    } else if (action == 3) {
-        send_serial_data("{mode:3:}");
-    } else {
-        Serial.printf("Invalid action command: %d\n", action);
-    }
+    // Serialize JSON to string
+    char jsonBuffer[256];
+    serializeJson(doc, jsonBuffer);
 
-    // Wind strength transmission
-    if (wind_speed == 1) {
-        send_serial_data("{wind:1:}");
-    } else if (wind_speed == 2) {
-        send_serial_data("{wind:2:}");
-    } else if (wind_speed == 3) {
-        send_serial_data("{wind:3:}");
-    } else {
-        Serial.printf("Invalid wind speed command: %d\n", wind_speed);
-    }
+    // Create the final message by combining jsonBuffer and {"start"}
+    char finalMessage[200];
+    snprintf(finalMessage, sizeof(finalMessage), "{\"start\":%s}", jsonBuffer);
 
-    // Time duration
-    if (duration == 1) {
-        send_serial_data("{duration:30:}");
-    } else if (duration == 2) {
-        send_serial_data("{duration:60:}");
-    } else if (duration == 3) {
-        send_serial_data("{duration:90:}");
-    } else {
-        Serial.printf("Invalid duration command: %d\n", duration);
-    }
+    Serial.println("finalMessage =");
+    Serial.println(finalMessage);
 
-    // Start OZS
-    send_serial_data("{start:act:}");
+    // Send the final message
+    send_serial_data(finalMessage);
 }
 
 void on_message_received(String &topic, String &payload) {

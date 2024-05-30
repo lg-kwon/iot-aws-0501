@@ -22,8 +22,8 @@
 
 
 #define DEBUG
-#define OZS_SERIAL_NUMBER_00002
-// #define OZS_SERIAL_NUMBER_00004
+// #define OZS_SERIAL_NUMBER_00002
+#define OZS_SERIAL_NUMBER_00004
 
 // 2024-05-29 : 디바이스 key 포함
 #ifdef OZS_SERIAL_NUMBER_00002
